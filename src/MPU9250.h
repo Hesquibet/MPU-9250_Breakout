@@ -210,6 +210,7 @@ class MPU9250
   protected:
     void writeByteWire(uint8_t, uint8_t, uint8_t);
     void writeByteSPI(uint8_t, uint8_t);
+    void readBytesSPI(uint8_t registerAddress, uint8_t count,uint8_t * dest);
     uint8_t readByteSPI(uint8_t subAddress);
     uint8_t readByteWire(uint8_t address, uint8_t subAddress);
   public:

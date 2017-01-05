@@ -1,6 +1,6 @@
 #include "MPU9250.h"
 
-#define SPI_DATA_RATE 5000
+#define SPI_DATA_RATE 500000
 
 //==============================================================================
 //====== Set of useful function to access acceleration. gyroscope, magnetometer,
@@ -167,6 +167,9 @@ void MPU9250::initMPU9250()
   writeByte(MPU9250_ADDRESS, PWR_MGMT_1, 0x00); // Clear sleep mode bit (6), enable all sensors
   delay(100); // Wait for all registers to reset
 
+  writeByte(MPU9250_ADDRESS, PWR_MGMT_2, 0b00000111);  // Auto select clock source to be PLL gyroscope reference if ready else
+  delay(200);
+
  // get stable time source
   writeByte(MPU9250_ADDRESS, PWR_MGMT_1, 0x01);  // Auto select clock source to be PLL gyroscope reference if ready else
   delay(200);
@@ -180,7 +183,7 @@ void MPU9250::initMPU9250()
   writeByte(MPU9250_ADDRESS, CONFIG, 0x03);
 
  // Set sample rate = gyroscope output rate/(1 + SMPLRT_DIV)
-  writeByte(MPU9250_ADDRESS, SMPLRT_DIV, 0x04);  // Use a 200 Hz rate; a rate consistent with the filter update rate
+  writeByte(MPU9250_ADDRESS, SMPLRT_DIV, 0x00);  // Use a 200 Hz rate; a rate consistent with the filter update rate
                                     // determined inset in CONFIG above
 
  // Set gyroscope full scale range
@@ -197,7 +200,6 @@ void MPU9250::initMPU9250()
   c = readByte(MPU9250_ADDRESS, ACCEL_CONFIG); // get current ACCEL_CONFIG register value
  // c = c & ~0xE0; // Clear self-test bits [7:5]
   c = c & ~0x18;  // Clear AFS bits [4:3]
-  c = c | Ascale << 3; // Set full scale range for the accelerometer
   writeByte(MPU9250_ADDRESS, ACCEL_CONFIG, c); // Write new ACCEL_CONFIG register value
 
  // Set accelerometer sample rate configuration
@@ -205,7 +207,7 @@ void MPU9250::initMPU9250()
  // accel_fchoice_b bit [3]; in this case the bandwidth is 1.13 kHz
   c = readByte(MPU9250_ADDRESS, ACCEL_CONFIG2); // get current ACCEL_CONFIG2 register value
   c = c & ~0x0F; // Clear accel_fchoice_b (bit 3) and A_DLPFG (bits [2:0])
-  c = c | 0x03;  // Set accelerometer rate to 1 kHz and bandwidth to 41 Hz
+  c = c | 0x08;  // Set accelerometer rate to 1 kHz and bandwidth to 41 Hz
   writeByte(MPU9250_ADDRESS, ACCEL_CONFIG2, c); // Write new ACCEL_CONFIG2 register value
  // The accelerometer, gyro, and thermometer are set to 1 kHz sample rates,
  // but all these rates are further reduced by a factor of 5 to 200 Hz because of the SMPLRT_DIV setting
@@ -519,6 +521,12 @@ uint8_t MPU9250::readByteSPI(uint8_t registerAddress)
 void MPU9250::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
                         uint8_t * dest)
 {
+  if(_csPin!=-1)
+  {
+      readBytesSPI(subAddress,count,dest);
+      return;
+  }
+
   Wire.beginTransmission(address);   // Initialize the Tx buffer
   Wire.write(subAddress);            // Put slave register address in Tx buffer
   Wire.endTransmission(false);       // Send the Tx buffer, but send a restart to keep connection alive
@@ -526,4 +534,20 @@ void MPU9250::readBytes(uint8_t address, uint8_t subAddress, uint8_t count,
   Wire.requestFrom(address, count);  // Read bytes from slave register address
   while (Wire.available()) {
     dest[i++] = Wire.read(); }         // Put read results in the Rx buffer
+}
+
+void MPU9250::readBytesSPI(uint8_t registerAddress, uint8_t count,
+                        uint8_t * dest)
+{
+
+        SPI.beginTransaction(SPISettings(SPI_DATA_RATE, MSBFIRST, SPI_MODE0));
+        digitalWrite(_csPin, LOW);
+        SPI.transfer(registerAddress | 0x80); // set first bit to 1
+        uint8_t i=0;
+        while(count--){
+          dest[i++] = SPI.transfer(0xff);
+        }
+
+        digitalWrite(_csPin, HIGH);
+        SPI.endTransaction();
 }
