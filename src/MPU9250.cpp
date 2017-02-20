@@ -81,10 +81,10 @@ void MPU9250::getAres() {
 void MPU9250::readAccelData(int16_t * destination)
 {
   uint8_t rawData[6];  // x/y/z accel register data stored here
-  readBytes(MPU9250_ADDRESS, ACCEL_XOUT_H, 6, &rawData[0]);  // Read the six raw data registers into data array
+  readBytes(MPU9250_ADDRESS, ACCEL_ZOUT_H, 2, &rawData[0]);  // Read the six raw data registers into data array
   destination[0] = ((int16_t)rawData[0] << 8) | rawData[1] ;  // Turn the MSB and LSB into a signed 16-bit value
-  destination[1] = ((int16_t)rawData[2] << 8) | rawData[3] ;
-  destination[2] = ((int16_t)rawData[4] << 8) | rawData[5] ;
+  //destination[1] = ((int16_t)rawData[2] << 8) | rawData[3] ;
+  //destination[2] = ((int16_t)rawData[4] << 8) | rawData[5] ;
 }
 
 
@@ -167,7 +167,7 @@ void MPU9250::initMPU9250()
   writeByte(MPU9250_ADDRESS, PWR_MGMT_1, 0x00); // Clear sleep mode bit (6), enable all sensors
   delay(100); // Wait for all registers to reset
 
-  writeByte(MPU9250_ADDRESS, PWR_MGMT_2, 0b00000111);  // Auto select clock source to be PLL gyroscope reference if ready else
+  writeByte(MPU9250_ADDRESS, PWR_MGMT_2, 0b00110111);  // Auto select clock source to be PLL gyroscope reference if ready else
   delay(200);
 
  // get stable time source
